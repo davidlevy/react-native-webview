@@ -101,6 +101,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import java.io.ByteArrayInputStream;
+
+
 /**
  * Manages instances of {@link WebView}
  * <p>
@@ -158,6 +161,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
   protected boolean mAllowsFullscreenVideo = false;
   protected @Nullable String mUserAgent = null;
   protected @Nullable String mUserAgentWithApplicationName = null;
+  // protected static @Nullable String[] allowedDomains = [];
 
   public RNCWebViewManager() {
     mWebViewConfig = new WebViewConfig() {
@@ -254,6 +258,10 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
   @ReactProp(name = "javaScriptEnabled")
   public void setJavaScriptEnabled(WebView view, boolean enabled) {
     view.getSettings().setJavaScriptEnabled(enabled);
+    view.getSettings().setLoadsImagesAutomatically(false);
+    view.getSettings().setBlockNetworkImage(true);
+    view.setFocusable(false);
+    view.setFocusableInTouchMode(false);
   }
 
   @ReactProp(name = "setBuiltInZoomControls")
@@ -341,20 +349,22 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
   @ReactProp(name = "overScrollMode")
   public void setOverScrollMode(WebView view, String overScrollModeString) {
-    Integer overScrollMode;
-    switch (overScrollModeString) {
-      case "never":
-        overScrollMode = View.OVER_SCROLL_NEVER;
-        break;
-      case "content":
-        overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS;
-        break;
-      case "always":
-      default:
-        overScrollMode = View.OVER_SCROLL_ALWAYS;
-        break;
-    }
-    view.setOverScrollMode(overScrollMode);
+    // allowedDomains[0] = overScrollModeString;
+
+    // Integer overScrollMode;
+    // switch (overScrollModeString) {
+    //   case "never":
+    //     overScrollMode = View.OVER_SCROLL_NEVER;
+    //     break;
+    //   case "content":
+    //     overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS;
+    //     break;
+    //   case "always":
+    //   default:
+    //     overScrollMode = View.OVER_SCROLL_ALWAYS;
+    //     break;
+    // }
+    // view.setOverScrollMode(overScrollMode);
   }
 
   @ReactProp(name = "nestedScrollEnabled")
@@ -759,11 +769,8 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
   }
 
   protected void setupWebChromeClient(ReactContext reactContext, WebView webView) {
-    Activity activity = reactContext.getCurrentActivity();
-
-    if (mAllowsFullscreenVideo && activity != null) {
-      int initialRequestedOrientation = activity.getRequestedOrientation();
-
+    if (mAllowsFullscreenVideo) {
+      int initialRequestedOrientation = reactContext.getCurrentActivity().getRequestedOrientation();
       mWebChromeClient = new RNCWebChromeClient(reactContext, webView) {
         @Override
         public Bitmap getDefaultVideoPoster() {
@@ -780,32 +787,31 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
           mVideoView = view;
           mCustomViewCallback = callback;
 
-          activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+          mReactContext.getCurrentActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
 
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             mVideoView.setSystemUiVisibility(FULLSCREEN_SYSTEM_UI_VISIBILITY);
-            activity.getWindow().setFlags(
-              WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-              WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            );
+            mReactContext.getCurrentActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
           }
 
           mVideoView.setBackgroundColor(Color.BLACK);
 
-          // Since RN's Modals interfere with the View hierarchy
-          // we will decide which View to hide if the hierarchy
-          // does not match (i.e., the WebView is within a Modal)
-          // NOTE: We could use `mWebView.getRootView()` instead of `getRootView()`
+          // since RN's Modals interfere with the View hierarchy
+          // we will decide which View to Hide if the hierarchy
+          // does not match (i.e., the webview is within a Modal)
+          // NOTE: We could use mWebView.getRootView() instead of getRootView()
           // but that breaks the Modal's styles and layout, so we need this to render
-          // in the main View hierarchy regardless
+          // in the main View hierarchy regardless.
           ViewGroup rootView = getRootView();
           rootView.addView(mVideoView, FULLSCREEN_LAYOUT_PARAMS);
 
           // Different root views, we are in a Modal
-          if (rootView.getRootView() != mWebView.getRootView()) {
+          if(rootView.getRootView() != mWebView.getRootView()){
             mWebView.getRootView().setVisibility(View.GONE);
-          } else {
-            // Same view hierarchy (no Modal), just hide the WebView then
+          }
+
+          // Same view hierarchy (no Modal), just hide the webview then
+          else{
             mWebView.setVisibility(View.GONE);
           }
 
@@ -818,18 +824,20 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             return;
           }
 
-          // Same logic as above
+          // same logic as above
           ViewGroup rootView = getRootView();
 
-          if (rootView.getRootView() != mWebView.getRootView()) {
+          if(rootView.getRootView() !=  mWebView.getRootView()){
             mWebView.getRootView().setVisibility(View.VISIBLE);
-          } else {
-            // Same view hierarchy (no Modal)
+          }
+
+          // Same view hierarchy (no Modal)
+          else{
             mWebView.setVisibility(View.VISIBLE);
           }
 
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+            mReactContext.getCurrentActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
           }
 
           rootView.removeView(mVideoView);
@@ -838,25 +846,22 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
           mVideoView = null;
           mCustomViewCallback = null;
 
-          activity.setRequestedOrientation(initialRequestedOrientation);
+          mReactContext.getCurrentActivity().setRequestedOrientation(initialRequestedOrientation);
 
           mReactContext.removeLifecycleEventListener(this);
         }
       };
-
       webView.setWebChromeClient(mWebChromeClient);
     } else {
       if (mWebChromeClient != null) {
         mWebChromeClient.onHideCustomView();
       }
-
       mWebChromeClient = new RNCWebChromeClient(reactContext, webView) {
         @Override
         public Bitmap getDefaultVideoPoster() {
           return Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888);
         }
       };
-
       webView.setWebChromeClient(mWebChromeClient);
     }
   }
@@ -907,10 +912,25 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     }
 
     @Override
+    public WebResourceResponse shouldInterceptRequest (final WebView view, String url) {
+                FLog.w(TAG, "shouldInterceptRequest:"+url);
+        // if (allowedDomains.length > 0 && !url.contains(allowedDomains[0])) {
+        //               return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
+        // } else 
+        if (url.contains(".css")) {
+            return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
+        // } else  if (url.contains(".woff")) {
+            // return new WebResourceResponse("font/woff2", "UTF-8", new ByteArrayInputStream("".getBytes()));
+        } else {
+            return super.shouldInterceptRequest(view, url);
+        }
+    }
+
+    @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
       final RNCWebView rncWebView = (RNCWebView) view;
       final boolean isJsDebugging = ((ReactContext) view.getContext()).getJavaScriptContextHolder().get() == 0;
-
+        
       if (!isJsDebugging && rncWebView.mCatalystInstance != null) {
         final Pair<Integer, AtomicReference<ShouldOverrideCallbackState>> lock = RNCWebViewModule.shouldOverrideUrlLoadingLock.getNewLock();
         final int lockIdentifier = lock.first;
@@ -919,6 +939,9 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         final WritableMap event = createWebViewEvent(view, url);
         event.putInt("lockIdentifier", lockIdentifier);
         rncWebView.sendDirectMessage("onShouldStartLoadWithRequest", event);
+
+
+
 
         try {
           assert lockObject != null;
