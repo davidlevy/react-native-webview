@@ -917,7 +917,11 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         // if (allowedDomains.length > 0 && !url.contains(allowedDomains[0])) {
         //               return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
         // } else 
-        if (url.contains(".css")) {
+        if (url.contains(".css") ||
+            url.contains(".ttf") || 
+            url.contains(".svg") || 
+            url.contains(".woff") || 
+           url.contains("fonts.googleapis.com")) {
             return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
         // } else  if (url.contains(".woff")) {
             // return new WebResourceResponse("font/woff2", "UTF-8", new ByteArrayInputStream("".getBytes()));
