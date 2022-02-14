@@ -921,6 +921,8 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             url.contains(".ttf") || 
             url.contains(".svg") || 
             url.contains(".woff") || 
+            url.contains(".webm") || 
+            url.contains(".mp4") || 
            url.contains("fonts.googleapis.com")) {
             return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
         // } else  if (url.contains(".woff")) {
