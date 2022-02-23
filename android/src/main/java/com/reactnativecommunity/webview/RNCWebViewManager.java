@@ -260,6 +260,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     view.getSettings().setJavaScriptEnabled(enabled);
     view.getSettings().setLoadsImagesAutomatically(false);
     view.getSettings().setBlockNetworkImage(true);
+    view.getSettings().setBlockNetworkImage(true);
     view.setFocusable(false);
     view.setFocusableInTouchMode(false);
   }
@@ -370,6 +371,10 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
   @ReactProp(name = "nestedScrollEnabled")
   public void setNestedScrollEnabled(WebView view, boolean enabled) {
     ((RNCWebView) view).setNestedScrollEnabled(enabled);
+    // if (enabled) { // allow focus for normal webviews (yt embed etc)
+    //   view.setFocusable(true);
+    //   view.setFocusableInTouchMode(true);
+    // }
   }
 
   @ReactProp(name = "thirdPartyCookiesEnabled")
@@ -913,17 +918,26 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
     @Override
     public WebResourceResponse shouldInterceptRequest (final WebView view, String url) {
+      final RNCWebView rncWebView = (RNCWebView) view;
                 FLog.w(TAG, "shouldInterceptRequest:"+url);
         // if (allowedDomains.length > 0 && !url.contains(allowedDomains[0])) {
         //               return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
         // } else 
-        if (url.contains(".css") ||
+        if (!rncWebView.nestedScrollEnabled && (url.contains(".css") ||
             url.contains(".ttf") || 
             url.contains(".svg") || 
             url.contains(".woff") || 
             url.contains(".webm") || 
             url.contains(".mp4") || 
-           url.contains("fonts.googleapis.com")) {
+           url.contains("facebook.net") ||
+           url.contains("analytics") ||
+           url.contains("hotjar.com") ||
+           url.contains("dynamicyield.com") ||
+           url.contains("glassix") ||  // castro
+           url.contains("iadvize") ||  
+           url.contains("chat.") ||  // bug
+           url.contains("gamitee.io") ||  // bug
+           url.contains("fonts.googleapis.com"))) {
             return new WebResourceResponse("text/css", "UTF-8", new ByteArrayInputStream("".getBytes()));
         // } else  if (url.contains(".woff")) {
             // return new WebResourceResponse("font/woff2", "UTF-8", new ByteArrayInputStream("".getBytes()));
